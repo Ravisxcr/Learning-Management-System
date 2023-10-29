@@ -6,9 +6,9 @@ import jwt
 SECRETS = '24bee0493c01b636e8a0fefb5beb37e7420eee7b'
 
 conf = ConnectionConfig(
-    MAIL_USERNAME="wevukus@hotmail.com",
-    MAIL_PASSWORD="trythemailNOW123$",
-    MAIL_FROM="wevukus@hotmail.com",
+    MAIL_USERNAME="",
+    MAIL_PASSWORD="",
+    MAIL_FROM="",
     MAIL_PORT=587,
     MAIL_SERVER="smtp.hotmail.com",
     MAIL_TLS=True,
