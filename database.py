@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import Enum
 from schemas import Roles
 
-from authentication import verify_password
+from authentication_fun import verify_password
 
 Base = declarative_base()
 engine = create_engine("mysql://root:tiger@localhost/lms",echo = True)
@@ -81,23 +81,23 @@ class StudentDet(Base):
 
 
 
-def create_login(username, password):
+def create_login(username, password,roles):
     with Session(engine) as session:
         res = session.query(User).filter(User.sid==username).first()
         if res:
             return "already"
         else:
-            usr = User(sid=username,roll_no=username,password=password)
+            usr = User(sid=username,roll_no=username,password=password,roles=roles)
             session.add(usr)
             session.commit()
-            return "sucessfull"
+            return "successful"
 
 def authenticate_login(username, password):
     with Session(engine) as session:
         res = session.query(User).filter(User.sid==username).first()
         if res:
             if verify_password(password, res.password) :
-                return True
+                return res.roles
         return False
 
     
@@ -120,7 +120,7 @@ def admission(data):
                 )
                 session.add(new_student)
                 session.commit()
-                return "sucessfull"
+                return "successful"
         except :
             return "Error"
         
@@ -143,16 +143,71 @@ def new_teacher(data):
                 )
                 session.add(new_teacher)
                 session.commit()
-                return "sucessfull"
+                return "successful"
         except:
             return "Error"
     
 
 
-def student_deatils():
+def all_student_deatils():
     with Session(engine) as session:
         try:
-            res = res = session.query(StudentDet).first()
+            res = session.query(StudentDet).first()
+            if res:
+                return res
+            else:
+                return False
+        except:
+            return "Error"
+        
+def student_deatils(sid):
+    with Session(engine) as session:
+        try:
+            res = session.query(StudentDet).filter(StudentDet.Sid==sid).first()
+            if res:
+                return res
+            else:
+                return False
+        except:
+            return "Error"
+        
+def is_student(sid):
+    with Session(engine) as session:
+        try:
+            res = session.query(StudentDet).filter(StudentDet.Sid==sid).first()
+            if res:
+                return True
+            else:
+                return False
+        except:
+            return False
+    
+def all_teacher_deatils():
+    with Session(engine) as session:
+        try:
+            res = session.query(Teacher).first()
+            if res:
+                return res
+            else:
+                return False
+        except:
+            return "Error"
+        
+def teacher_deatils(tid):
+    with Session(engine) as session:
+        try:
+            res = session.query(Teacher),filter(Teacher.Tid==tid).first()
+            if res:
+                return res
+            else:
+                return False
+        except:
+            return "Error"
+        
+def get_marks(sid,subid):
+    with Session(engine) as session:
+        try:
+            res = session.query(Teacher),filter(Marks.sid==sid, Marks.subid==subid).first()
             if res:
                 return res
             else:
@@ -160,15 +215,24 @@ def student_deatils():
         except:
             return "Error"
     
-def teacher_deatils():
-    with engine.connect() as conn:
-        result = conn.execute(text("select * from teacherdet"))
-        return result.all()
-    
 def subject_list():
     with engine.connect() as conn:
         result = conn.execute(text("select * from sublist"))
         return result.all()
+    
+def remove_student(data):
+    if is_student(data.Sid):
+        with Session(engine) as session:
+            try:
+                obj = User.session.query(Teacher).filter_by(id=123).one()
+                session.delete(obj)
+                if obj:
+                    return True
+                else:
+                    return False
+            except:
+                return "Error"
+
     
 if __name__ =="__main__":
     Base.metadata.create_all(engine)
