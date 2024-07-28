@@ -2,6 +2,17 @@ from pydantic import BaseModel, EmailStr
 from typing import List
 from enum import Enum
 
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str or None = None
+    role: str
+
+
 class Roles(str, Enum):
     teacher = "teacher"
     student = "student"
@@ -17,7 +28,7 @@ class Login(BaseModel):
 class Registration(BaseModel):
     username :str
     password : str
-    role : Roles = "student"
+    role : Roles
 
 class Student(BaseModel):
     Sid : str
@@ -29,7 +40,7 @@ class Student(BaseModel):
     Email_home : str 
     Phone : int
 
-class Teacher(BaseModel):
+class TeacherDet(BaseModel):
     Tid : int
     Tname : str
     Designation : str
@@ -46,6 +57,5 @@ class Sublist(BaseModel):
     Slot : str
 
 class Studentdel(BaseModel):
-    Sid : str
-    Roll_no : int
-    Sname : str
+    sid : str
+    

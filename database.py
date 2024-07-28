@@ -1,26 +1,33 @@
-from sqlalchemy import create_engine, text, Column, Integer, String, Boolean, DateTime, ForeignKey, Float,TIME
+from sqlalchemy import create_engine, text, Column, Integer, String, Boolean, DateTime, ForeignKey, Float,TIME, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Session
 from sqlalchemy import Enum
 from schemas import Roles
+from passlib.context import CryptContext
 
-from authentication_fun import verify_password
+
 
 Base = declarative_base()
 engine = create_engine("mysql://root:tiger@localhost/lms",echo = True)
-# Session = sessionmaker(bind=engine)
-# session = Session()
+Session = sessionmaker(bind=engine)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
 
 class User(Base):
-    __tablename__ = 'studentlogin'
+    __tablename__ = 'all_login'
 
-    sid = Column(String(30), primary_key=True, index=True)
-    roll_no = Column(String(30), nullable=False)
+    uid = Column(String(30), primary_key=True, index=True)
     password = Column(String(200), nullable=False)
-    is_verified = Column(Boolean)
-    roles = Column(Enum(Roles), default="student")
+    role = Column(Enum(Roles), nullable=False)
     join_date = Column(DateTime, default=func.now())
 
 class Slots(Base):
@@ -33,7 +40,7 @@ class Slots(Base):
 class Marks(Base):
     __tablename__ = "marks"
 
-    sid = Column(Integer, primary_key=True, index=True)
+    sid = Column(String(30), primary_key=True, index=True)
     subid = Column(String(10), primary_key=True, index=True)
     score = Column(Integer)
     remarks = Column(String(20), primary_key=True, index=True)
@@ -42,7 +49,7 @@ class Enrolled(Base):
 
     __tablename__ = "enrolled"
 
-    sid = Column(Integer, primary_key=True, index=True)
+    sid = Column(String(30), primary_key=True, index=True)
     subid = Column(String(10), primary_key=True, index=True)
     total = Column(Integer)
 
@@ -52,20 +59,20 @@ class Sublist(Base):
 
     subid = Column(String(10), nullable=False, primary_key=True, index=True)
     subname = Column(String(20), nullable=False)
-    facid = Column(Integer, nullable=False)
+    Tid = Column(String(30), nullable=False)
     slotid = Column(String(10), nullable=False)
 
 class Teacher(Base):
     __tablename__ = 'teacherdet'
 
-    Tid = Column(Integer, primary_key=True, nullable=False)
+    Tid = Column(String(30), primary_key=True, nullable=False)
     Tname = Column(String(50), nullable=False)
     Designation = Column(String(10))
     Age = Column(Integer)
     Address = Column(String(60), nullable=False)
     Email_office = Column(String(50))
     Email_home = Column(String(50))
-    Phone = Column(Integer)
+    Phone = Column(BigInteger)
 
 class StudentDet(Base):
     __tablename__ = 'studentdet'
@@ -77,32 +84,31 @@ class StudentDet(Base):
     Age = Column(Integer, nullable=False)
     Address = Column(String(60))
     Email_home = Column(String(50))
-    Phone = Column(Integer)
+    Phone = Column(BigInteger)
 
 
 
-def create_login(username, password,roles):
-    with Session(engine) as session:
-        res = session.query(User).filter(User.sid==username).first()
+def create_login(user):
+    with Session() as session:
+        res = session.query(User).filter(User.uid==user.username).first()
         if res:
             return "already"
         else:
-            usr = User(sid=username,roll_no=username,password=password,roles=roles)
+            usr = User(uid=user.username,password=get_password_hash(user.password), role=user.role)
             session.add(usr)
             session.commit()
             return "successful"
 
 def authenticate_login(username, password):
-    with Session(engine) as session:
-        res = session.query(User).filter(User.sid==username).first()
-        if res:
-            if verify_password(password, res.password) :
-                return res.roles
+    with Session() as session:
+        res = session.query(User).filter(User.uid==username).first()
+        if res and verify_password(password,res.password) :
+            return res.role
         return False
 
     
 def admission(data):
-    with Session(engine) as session:
+    with Session() as session:
         try:
             res = session.query(StudentDet).filter(StudentDet.Sid==data['Sid']).first()
             if res:
@@ -124,22 +130,22 @@ def admission(data):
         except :
             return "Error"
         
-def new_teacher(data):
-    with Session(engine) as session:
+def add_new_teacher(data):
+    with Session() as session:
         try:
-            res = session.query(Teacher).filter(Teacher.Tid==data["Tid"]).first()
+            res = session.query(Teacher).filter(Teacher.Tid==data.Tid).first()
             if res:
                 return "already"
             else:
                 new_teacher = Teacher(
-                    Tid=data["Tid"],
-                    Tname=data["Tname"],
-                    Designation=data["Designation"],
-                    Age=data["Age"],
-                    Address=data["Address"],
-                    Email_office=data["Email_office"],
-                    Email_home=data["Email_home"],
-                    Phone=data["Phone"]
+                    Tid=data.Tid,
+                    Tname=data.Tname,
+                    Designation=data.Designation,
+                    Age=data.Age,
+                    Address=data.Address,
+                    Email_office=data.Email_office,
+                    Email_home=data.Email_home,
+                    Phone=data.Phone
                 )
                 session.add(new_teacher)
                 session.commit()
@@ -150,9 +156,9 @@ def new_teacher(data):
 
 
 def all_student_deatils():
-    with Session(engine) as session:
+    with Session() as session:
         try:
-            res = session.query(StudentDet).first()
+            res = session.query(StudentDet).all()
             if res:
                 return res
             else:
@@ -161,7 +167,7 @@ def all_student_deatils():
             return "Error"
         
 def student_deatils(sid):
-    with Session(engine) as session:
+    with Session() as session:
         try:
             res = session.query(StudentDet).filter(StudentDet.Sid==sid).first()
             if res:
@@ -171,19 +177,9 @@ def student_deatils(sid):
         except:
             return "Error"
         
-def is_student(sid):
-    with Session(engine) as session:
-        try:
-            res = session.query(StudentDet).filter(StudentDet.Sid==sid).first()
-            if res:
-                return True
-            else:
-                return False
-        except:
-            return False
     
 def all_teacher_deatils():
-    with Session(engine) as session:
+    with Session() as session:
         try:
             res = session.query(Teacher).first()
             if res:
@@ -194,9 +190,9 @@ def all_teacher_deatils():
             return "Error"
         
 def teacher_deatils(tid):
-    with Session(engine) as session:
+    with Session() as session:
         try:
-            res = session.query(Teacher),filter(Teacher.Tid==tid).first()
+            res = session.query(Teacher).filter(Teacher.Tid==tid).first()
             if res:
                 return res
             else:
@@ -204,10 +200,10 @@ def teacher_deatils(tid):
         except:
             return "Error"
         
-def get_marks(sid,subid):
-    with Session(engine) as session:
+def get_my_marks(sid):
+    with Session() as session:
         try:
-            res = session.query(Teacher),filter(Marks.sid==sid, Marks.subid==subid).first()
+            res = session.query(Marks).filter(Marks.sid==sid).all()
             if res:
                 return res
             else:
@@ -220,18 +216,18 @@ def subject_list():
         result = conn.execute(text("select * from sublist"))
         return result.all()
     
-def remove_student(data):
-    if is_student(data.Sid):
-        with Session(engine) as session:
-            try:
-                obj = User.session.query(Teacher).filter_by(id=123).one()
-                session.delete(obj)
-                if obj:
-                    return True
-                else:
-                    return False
-            except:
-                return "Error"
+def remove_student(sid):
+    with Session() as session:
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text(f"DELETE FROM studentdet WHERE Sid = :sid"), {"sid": sid})
+                conn.commit()
+                if result.rowcount == 0:
+                    return "Student not found"
+                return f"Student with Sid {sid} deleted successfully."
+                
+        except Exception as e:
+            return "Error occured"
 
     
 if __name__ =="__main__":
