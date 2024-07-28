@@ -1,4 +1,4 @@
 dbcommand.ipynb
 lmsenv/
-__pycache__
+__pycache__/
 .env.sample
