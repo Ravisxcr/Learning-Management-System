@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Session
 from sqlalchemy import Enum
-from schemas import Roles
+from schemas import Roles, Level
 from passlib.context import CryptContext
 
 
@@ -30,12 +30,6 @@ class User(Base):
     role = Column(Enum(Roles), nullable=False)
     join_date = Column(DateTime, default=func.now())
 
-class Slots(Base):
-    __tablename__ = 'slots'
-
-    slotid = Column(String(10), nullable=False, primary_key=True, index=True)
-    slottime = Column(String(10), nullable=False)
-
 
 class Marks(Base):
     __tablename__ = "marks"
@@ -58,9 +52,10 @@ class Sublist(Base):
     __tablename__ = 'sublist'
 
     subid = Column(String(10), nullable=False, primary_key=True, index=True)
-    subname = Column(String(20), nullable=False)
-    Tid = Column(String(30), nullable=False)
-    slotid = Column(String(10), nullable=False)
+    subname = Column(String(30), nullable=False)
+    Tid = Column(String(20), nullable=False)
+    credit = Column(Integer, nullable=False)
+    level = Column(Enum(Level), nullable=False)
 
 class Teacher(Base):
     __tablename__ = 'teacherdet'
@@ -107,12 +102,12 @@ def authenticate_login(username, password):
         return False
 
     
-def admission(data):
+def add_new_student(data):
     with Session() as session:
         try:
             res = session.query(StudentDet).filter(StudentDet.Sid==data['Sid']).first()
             if res:
-                return "already"
+                return "Already"
             else:
                 new_student = StudentDet(
                     Sid=data['Sid'],
@@ -152,6 +147,51 @@ def add_new_teacher(data):
                 return "successful"
         except:
             return "Error"
+        
+def add_new_subject(data):
+    msg = None
+    try:
+        with Session() as session:
+            res = session.query(Sublist).filter(Sublist.subid==data.Sub_id).first()
+            if res:
+                msg = "Already"
+            else:
+                new_teacher = Sublist(
+                    subid = data.Sub_id,
+                    subname = data.Sub_name,
+                    Tid = data.Faculty_id,
+                    credit = data.Course_credit,
+                    level = data.Course_level
+                )
+                session.add(new_teacher)
+                session.commit()
+                msg = "Successful"
+    except :
+        msg = "Error"
+    return msg
+
+
+def add_student_marks(data_list):
+    msg = None
+    try:
+        with Session() as session:
+            new_marks = []
+            for data in data_list:
+                new_marks.append(Marks(
+                    sid = data.sid,
+                    subid = data.subid,
+                    score = data.score,
+                    remarks = data.remarks
+                ))
+            session.add_all(new_marks)
+            session.commit()
+            msg = "Successful"
+    except Exception as e:
+        msg = e
+    return msg
+
+
+
     
 
 
@@ -173,7 +213,7 @@ def student_deatils(sid):
             if res:
                 return res
             else:
-                return False
+                return "Empty"
         except:
             return "Error"
         
@@ -185,7 +225,7 @@ def all_teacher_deatils():
             if res:
                 return res
             else:
-                return False
+                return "Empty"
         except:
             return "Error"
         
@@ -196,7 +236,7 @@ def teacher_deatils(tid):
             if res:
                 return res
             else:
-                return False
+                return "Empty"
         except:
             return "Error"
         
@@ -207,27 +247,83 @@ def get_my_marks(sid):
             if res:
                 return res
             else:
-                return False
+                return "Empty"
         except:
             return "Error"
+        
+
+def get_my_report(sid):
+    try:
+        with Session() as session:
+            res = session.query(Enrolled).filter(Enrolled.sid==sid).all()
+            if res:
+                return res
+            else:
+                return "Empty"
+    except:
+        return "Error"
     
 def subject_list():
-    with engine.connect() as conn:
-        result = conn.execute(text("select * from sublist"))
-        return result.all()
+    try:
+        with Session() as session:
+            res = session.query(Sublist).all()
+            if res:
+                return res
+            else:
+                return "Empty"
+    except:
+        return "Error"
     
+def create_ulogin(data):
+    try:
+        with Session() as session:
+            res = session.query(User).filter(User.uid==data.username).first()
+            if res:
+                return "Already"
+            res = session.query(StudentDet).filter(StudentDet.Sid==data.username).first()
+            if res:
+                usr = User(uid=data.username,password=get_password_hash(data.password), role=Roles.student)
+                session.add(usr)
+                session.commit()
+                return f"Created login {data.username} as {Roles.student}"
+            res = session.query(Teacher).filter(Teacher.Tid==data.username).first()
+            if res:
+                usr = User(uid=data.username,password=get_password_hash(data.password), role=Roles.teacher)
+                session.add(usr)
+                session.commit()
+                return f"Created login {data.username} as {Roles.teacher}"
+
+            else:
+                return False
+    except:
+        return "Error"
+  
 def remove_student(sid):
-    with Session() as session:
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(text(f"DELETE FROM studentdet WHERE Sid = :sid"), {"sid": sid})
-                conn.commit()
-                if result.rowcount == 0:
-                    return "Student not found"
-                return f"Student with Sid {sid} deleted successfully."
-                
-        except Exception as e:
-            return "Error occured"
+    try:
+        with Session() as session:
+            res = session.query(StudentDet).filter(StudentDet.Sid==sid).first()
+            if res:
+                session.delete(res)
+                session.commit()
+                return f"Deleted {sid}"
+            else:
+                return False
+    except:
+        return "Error"
+        
+def remove_faculty(tid):
+    try:
+        with Session() as session:
+            res = session.query(Teacher).filter(Teacher.Tid==tid).first()
+            if res:
+                session.delete(res)
+                session.commit()
+                return f"Deleted {tid}"
+            else:
+                return False
+    except:
+        return "Error"
+    
 
     
 if __name__ =="__main__":

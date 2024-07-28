@@ -1,7 +1,6 @@
 # from fastapi import BackgroundTasks, UploadFile, File, Form, Depends, HTTPException, status
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from schemas import *
-import jwt
 
 SECRETS = '24bee0493c01b636e8a0fefb5beb37e7420eee7b'
 
@@ -19,13 +18,7 @@ conf = ConnectionConfig(
 
 
 
-async def send_email(email: EmailSchema, instance: Login):
-    token_data = {
-    "id": instance.id,
-    "username": instance.username
-    }
-
-    token = jwt.encode(token_data, SECRETS)
+async def send_email(email: EmailSchema):
 
     template = f""" <!DOCTYPE html>
     <html>

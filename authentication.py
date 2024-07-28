@@ -2,7 +2,6 @@ from fastapi import HTTPException, status, Depends
 from typing import Annotated, Union
 from jose import JWTError, jwt
 from datetime import timedelta, datetime
-from schemas import *
 from database import *
 
 

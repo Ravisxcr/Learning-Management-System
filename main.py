@@ -32,17 +32,9 @@ async def get_current_user(token:str = Depends(oauth2_scheme)):
     return token_data
 
 
-@app.get("/ping")
+@app.get("/")
 async def ping():
     return "Hello, I am alive"
-
-@app.get("/my_status")
-async def my_status(current_user: TokenData = Depends(get_current_user)):
-    try:
-        return current_user
-    except:
-        return "Error occured"
-
 
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -55,18 +47,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"username": form_data.username}, role=user, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
-
-    
-@app.post("/registration")
-async def login_registration(user: Registration, current_user: TokenData = Depends(get_current_user)):
+@app.get("/my_status")
+async def my_status(current_user: TokenData = Depends(get_current_user)):
     try:
-        if current_user.role == "admin":
-            return db.create_login(user)
-        else:
-            return {"message": "you are not admin"}     
-    except Exception as ex:
-        print(str(ex))
-        raise ex
+        return current_user
+    except:
+        return "Error occured"
+    
+
 
 @app.get("/student")
 async def get_student_details(current_user: TokenData = Depends(get_current_user)):
@@ -88,17 +76,14 @@ async def get_student_details(current_user: TokenData = Depends(get_current_user
             return {"message": "you are not student"}
     except:
         return "Error occured"
-
-
-
-@app.post('/admission')
-async def new_admission_form(request : Union[Student, List], current_user: TokenData = Depends(get_current_user)):
+    
+@app.get("/my_report")
+async def my_report(current_user: TokenData = Depends(get_current_user)):
     try:
-        if current_user.role == "admin":
-            stu_info = dict(request)
-            return admission(stu_info)
+        if current_user.role == "student":
+            return get_my_report(current_user.username)
         else:
-            return {"message": "you are not admin"}
+            return {"message": "you are not student"}
     except:
         return "Error occured"
 
@@ -118,8 +103,52 @@ async def get_teacher_details(current_user: TokenData = Depends(get_current_user
 async def get_sublist(current_user: TokenData = Depends(get_current_user)):
     return db.subject_list()
 
-@app.post("/addfaculty")
-async def new_faculty(request : TeacherDet, current_user: TokenData = Depends(get_current_user)):
+@app.post("/add_marks")
+async def add_marks(request : List[StudentMarks], current_user: TokenData = Depends(get_current_user)):
+    msg = None
+    try:
+        if current_user.role == "teacher":
+            msg = add_student_marks(request)
+        else:
+            msg = "you are not teacher"
+    except:
+        msg = "Error occured"
+    return {"message" : msg}
+
+@app.post("/login_registration")
+async def login_registration(user: Registration, current_user: TokenData = Depends(get_current_user)):
+    try:
+        if current_user.role == "admin":
+            return db.create_login(user)
+        else:
+            return {"message": "you are not admin"}     
+    except Exception as ex:
+        print(str(ex))
+        raise ex
+
+@app.post('/add_student')
+async def add_student(request : Union[Student, List[Student]], current_user: TokenData = Depends(get_current_user)):
+    try:
+        if current_user.role == "admin":
+            stu_info = dict(request)
+            return add_new_student(stu_info)
+        else:
+            return {"message": "you are not admin"}
+    except:
+        return "Error occured"
+    
+@app.post('/add_subject')
+async def add_subject(request : SubList, current_user: TokenData = Depends(get_current_user)):
+    try:
+        if current_user.role == "admin":
+            return add_new_subject(request)
+        else:
+            return {"message": "you are not admin"}
+    except:
+        return "Error occured"
+
+@app.post("/add_faculty")
+async def add_faculty(request : TeacherDet, current_user: TokenData = Depends(get_current_user)):
     msg = None
     try:
         if current_user.role == "admin":
@@ -128,19 +157,46 @@ async def new_faculty(request : TeacherDet, current_user: TokenData = Depends(ge
             msg = "you are not admin"
     except:
         msg = "Error occured"
-    
     return {"message" : msg}
+
+@app.post("/create_user_login")
+async def create_user_login(request: Login,  current_user: TokenData = Depends(get_current_user)):
+    msg = None
+    try:
+        if current_user.role == "admin":
+            msg = create_ulogin(request)
+        else:
+            msg = "you are not admin"
+    except:
+        msg = "Error occured"
+    return {"message" : msg}
+
     
 
-@app.delete('/delstudent')
-async def remove_student(request : Studentdel, current_user: TokenData = Depends(get_current_user)):
+@app.delete('/remove_student_data')
+async def remove_student_data(request : DeleteID, current_user: TokenData = Depends(get_current_user)):
+    msg = None
     try:
-        if app.name and app.role == "admin":
-            return remove_student(request.sid)
+        if current_user.role == "admin":
+            msg =  remove_student(request.id)
         else:
-            return {"message": "you are not admin"}
+            msg = "you are not admin"
     except:
-        return "Error occured"
+        msg = "Error occured"
+    return {"message" : msg}
+
+    
+@app.delete('/remove_faculty_data')
+async def remove_faculty_data(request : DeleteID, current_user: TokenData = Depends(get_current_user)):
+    msg = None
+    try:
+        if current_user.role == "admin":
+            msg = remove_faculty(request.id)
+        else:
+            msg = "you are not admin"
+    except:
+        msg = "Error occured"
+    return {"message" : msg}
 
 
 

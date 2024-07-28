@@ -9,7 +9,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str or None = None
+    username: str | None = None
     role: str
 
 
@@ -17,6 +17,11 @@ class Roles(str, Enum):
     teacher = "teacher"
     student = "student"
     admin = "admin"
+
+class Level(str, Enum):
+    A = 'A'
+    B = 'B'
+    C = 'C'
 
 class EmailSchema(BaseModel):
     email: List[EmailStr]
@@ -50,12 +55,19 @@ class TeacherDet(BaseModel):
     Email_home : str
     Phone : int
 
-class Sublist(BaseModel):
+class SubList(BaseModel):
     Sub_id : str
     Sub_name : str
-    Faculty_id : int
-    Slot : str
+    Faculty_id : str
+    Course_credit : int
+    Course_level : Level
 
-class Studentdel(BaseModel):
+class StudentMarks(BaseModel):
     sid : str
+    subid : str
+    score : int
+    remarks : str
+
+class DeleteID(BaseModel):
+    id : str
     
